@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Результаты формы</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<a href="/result" >Слопнуть</a>
+    <div class="container">
+        <div class="empty-area">
+            <img src={{result_image}} alt="Результат(слоп)">
+        </div>
+
+        <div class="gallery-section">
+            <h1>Галерея изображений</h1>
+
+            {% if image_urls %}
+                <div class="gallery">
+                    {% for image_url in image_urls %}
+                        <div class="image-container">
+                            <img src="{{ image_url }}" alt="Uploaded image {{ forloop.counter }}">
+                            <a href="{% url 'delete_image_by_index' index=forloop.counter0 %}" >X</a>
+                            <a href="{% url 'moveup_image_by_index' index=forloop.counter0 %}" >/\</a>
+                            <a href="{% url 'movedown_image_by_index' index=forloop.counter0 %}" >\/</a>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-message">
+                    <p>Нет загруженных изображений</p>
+                </div>
+            {% endif %}
+
+            <div class="back-link">
+                <a href="/">Загрузить еще изображения</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
