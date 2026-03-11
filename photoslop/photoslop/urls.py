@@ -28,7 +28,11 @@ urlpatterns = [
     path("up/<int:index>/", views.up, name='moveup_image_by_index'),
     path("down/<int:index>/", views.down, name='movedown_image_by_index'),
     path("result/", views.result),
-    path("vanish/", views.vanish)
+    path("vanish/", views.vanish),
+    path("nored/<int:index>/", views.red_filter, name = 'remove_red_image_by_index'),
+    path("nogreen/<int:index>/", views.green_filter, name = 'remove_green_image_by_index'),
+    path("noblue/<int:index>/", views.blue_filter, name = 'remove_blue_image_by_index'),
+    path('change-opacity/<int:index>/', views.change_opacity, name='change_opacity'),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

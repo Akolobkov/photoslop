@@ -23,8 +23,27 @@
                             <a href="{% url 'delete_image_by_index' index=forloop.counter0 %}" >X</a>
                             <a href="{% url 'moveup_image_by_index' index=forloop.counter0 %}" >/\</a>
                             <a href="{% url 'movedown_image_by_index' index=forloop.counter0 %}" >\/</a>
+                            <a href="{% url 'remove_red_image_by_index' index=forloop.counter0 %}" >красный</a>
+                            <a href="{% url 'remove_green_image_by_index' index=forloop.counter0 %}" >зеленый</a>
+                            <a href="{% url 'remove_blue_image_by_index' index=forloop.counter0 %}" >синий</a>
+                            <br>
+                            <div class="opacity-control">
+                            <label>Opacity:
+                                <input type="range"
+                                min="0"
+                                max="255"
+                                value="{{ image.opacity|default:255 }}"
+                                onchange="changeOpacity(this, {{ forloop.counter0 }})">
+                            </label>
+                            </div>
                         </div>
                     {% endfor %}
+                    <script>
+                    function changeOpacity(slider, index) {
+                    const opacity = slider.value;
+                    window.location.href = "{% url 'change_opacity' 0 %}".replace('0', index) + '?opacity=' + opacity;
+                    }
+                    </script>
                 </div>
             {% else %}
                 <div class="empty-message">
