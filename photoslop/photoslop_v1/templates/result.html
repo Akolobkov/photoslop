@@ -28,13 +28,36 @@
                             <a href="{% url 'remove_blue_image_by_index' index=forloop.counter0 %}" >синий</a>
                             <br>
                             <div class="opacity-control">
-                            <label>Opacity:
-                                <input type="range"
-                                min="0"
-                                max="255"
-                                value="{{ image.opacity|default:255 }}"
-                                onchange="changeOpacity(this, {{ forloop.counter0 }})">
-                            </label>
+                            <div class="opacity-control">
+                        <label>Opacity:
+                            <input type="number"
+                                   min="0"
+                                   max="255"
+                                   value="
+                                   {% if alphas %}
+                                       {% for alpha in alphas %}
+                                           {% if forloop.counter0 == forloop.parentloop.counter0 %}
+                                               {{ alpha }}
+                                           {% endif %}
+                                       {% endfor %}
+                                   {% else %}
+                                       255
+                                   {% endif %}
+                                   "
+                                   onchange="changeOpacity(this, {{ forloop.counter0 }})">
+                        </label>
+                    </div>
+                               <span class="opacity-value">
+                                {% if alphas %}
+                                {% for alpha in alphas %}
+                                {% if forloop.counter0 == forloop.parentloop.counter0 %}
+                                    {{ alpha }}
+                                {% endif %}
+                                {% endfor %}
+                                {% else %}
+                                    255
+                                {% endif %}
+                                </span>
                             </div>
                         </div>
                     {% endfor %}

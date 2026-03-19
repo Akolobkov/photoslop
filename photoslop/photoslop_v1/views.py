@@ -12,6 +12,8 @@ from django.shortcuts import render
 import pickle
 import base64
 
+
+
 def index(request):
     return render(request, "index.html")
 
@@ -19,37 +21,22 @@ def index(request):
 def postpic(request):
     if request.method == 'POST':
         image_urls = request.session.get('uploaded_images', [])
-
+        alphas = request.session.get('alphas', [])
         if request.FILES.getlist('profile_image'):
             images = request.FILES.getlist('profile_image')
             fs = FileSystemStorage()
 
             for image in images:
                 filename = fs.save(image.name, image)
-                file_path = fs.path(filename)
-
-                img = Image.open(file_path).convert('RGBA')
-
-                data = img.getdata()
-                img.putdata([(r, g, b, 255) for r, g, b, a in data])
-
-
-                base = os.path.splitext(file_path)[0]
-                new_path = f"{base}_rgba.png"
-                img.save(new_path, 'PNG')
-
-                new_filename = os.path.basename(new_path)
-                image_url = fs.url(new_filename)
-
-                os.remove(file_path)
-
+                image_url = fs.url(filename)
                 image_urls.append(image_url)
 
             request.session['uploaded_images'] = image_urls
+            alphas.append(255)
+            request.session['alphas'] = alphas
         return redirect('/result')
 
     return redirect('/')
-
 
 def showpic(request):
     image_urls = request.session.get('uploaded_images', [])
@@ -63,65 +50,161 @@ def showpic(request):
 def vanish(request):
 
     request.session['uploaded_images'] = []
-
+    request.session['alphas'] = []
     return redirect('/')
+
+
 def delete(request, index):
     image_urls = request.session.get('uploaded_images', [])
+    alphas = request.session.get('alphas', [])
+
+    # Удаляем изображение и соответствующее alpha-значение
     image_urls.pop(index)
+    if alphas and index < len(alphas):
+        alphas.pop(index)
+
+    # Сохраняем обновленные списки
     request.session['uploaded_images'] = image_urls
+    request.session['alphas'] = alphas
+
     return redirect('/result')
+
+
 def up(request, index):
     image_urls = request.session.get('uploaded_images', [])
-    buf = image_urls[index]
-    if index>0:
-        image_urls[index] = image_urls[index-1]
-        image_urls[index-1] = buf
+    alphas = request.session.get('alphas', [])
+
+    if index > 0:
+        # Меняем местами изображения
+        buf_url = image_urls[index]
+        image_urls[index] = image_urls[index - 1]
+        image_urls[index - 1] = buf_url
+
+        # Меняем местами alpha-значения
+        if alphas and index < len(alphas):
+            buf_alpha = alphas[index]
+            alphas[index] = alphas[index - 1]
+            alphas[index - 1] = buf_alpha
+
+    # Сохраняем обновленные списки
     request.session['uploaded_images'] = image_urls
+    request.session['alphas'] = alphas
+
     return redirect('/result')
+
+
 def down(request, index):
     image_urls = request.session.get('uploaded_images', [])
-    buf = image_urls[index]
-    if index<len(image_urls)-1:
-        image_urls[index] = image_urls[index+1]
-        image_urls[index+1] = buf
+    alphas = request.session.get('alphas', [])
+
+    if index < len(image_urls) - 1:
+        # Меняем местами изображения
+        buf_url = image_urls[index]
+        image_urls[index] = image_urls[index + 1]
+        image_urls[index + 1] = buf_url
+
+        # Меняем местами alpha-значения
+        if alphas and index < len(alphas):
+            buf_alpha = alphas[index]
+            alphas[index] = alphas[index + 1]
+            alphas[index + 1] = buf_alpha
+
+    # Сохраняем обновленные списки
     request.session['uploaded_images'] = image_urls
+    request.session['alphas'] = alphas
+
     return redirect('/result')
+
+
 def result(request):
     image_urls = request.session.get('uploaded_images', [])
+    alphas = request.session.get('alphas')
+    alphas = list(map(float, alphas))
+    alphas = [x / 255 for x in alphas]
+    alphas.reverse()
+
     images = []
-    for image_url in image_urls:
+    for image_url in reversed(image_urls):
         decoded_url = unquote(image_url)
         relative_path = decoded_url.replace('/media/', '', 1)
         image_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+
+        # Проверяем существование файла
+        if not os.path.exists(image_path):
+            print(f"Файл {image_path} не найден!")
+            continue
+
         img = Image.open(image_path)
         images.append(img)
-    img_arrays = list(map(np.array, images))
-    shapes = []
-    for i in img_arrays:
-        shapes.append(i.shape)
-    mshape = [max(shape[0] for shape in shapes),
-              max(shape[1] for shape in shapes)]
-    if len(img_arrays[0].shape) == 3:
-        result = np.zeros((mshape[0], mshape[1], img_arrays[0].shape[2]), dtype=np.uint8)
-    else:
-        result = np.zeros(mshape, dtype=np.uint8)
-    for img in reversed(img_arrays):
+
+    # Конвертируем в RGBA
+    img_arrays = []
+    for img in images:
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        img_arrays.append(np.array(img))
+
+    # Определяем максимальные размеры
+    shapes = [img.shape for img in img_arrays]
+    mshape = [
+        max(shape[0] for shape in shapes),
+        max(shape[1] for shape in shapes)
+    ]
+
+    # Инициализируем фоновые массивы
+    alpha_bg = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
+    c_bg = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
+
+    for i in range(len(img_arrays)):
+        img = img_arrays[i]
+        alpha = alphas[i] if i < len(alphas) else 1.0
+
         h, w = img.shape[:2]
-        result[:h, :w] = img
+
+        alpha_src = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
+        c_src = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
+
+        alpha_src[:h, :w] = img[:, :, 3] / 255.0
+        c_src[:h, :w, :] = img[:, :, :3] / 255.0
+
+        alpha_src = alpha_src * alpha
+
+        alpha_out = alpha_src + alpha_bg * (1 - alpha_src)
+
+        mask = alpha_out > 0
+        c_out = np.zeros_like(c_src)
+
+        c_out[mask] = (
+                              c_src[mask] * alpha_src[mask, np.newaxis] +
+                              c_bg[mask] * alpha_bg[mask, np.newaxis] * (1 - alpha_src[mask, np.newaxis])
+                      ) / alpha_out[mask, np.newaxis]
+
+        c_out[~mask] = c_bg[~mask]
+
+        alpha_bg = alpha_out
+        c_bg = c_out
+
+    # Создаем итоговое изображение
+    result = np.zeros((mshape[0], mshape[1], 4), dtype=np.uint8)
+    result[:, :, :3] = (c_bg * 255).astype(np.uint8)
+    result[:, :, 3] = (alpha_bg * 255).astype(np.uint8)
+
+    # Сохраняем результат
     img = Image.fromarray(result)
     result_filename = 'result.png'
     result_path = os.path.join(settings.MEDIA_ROOT, result_filename)
     img.save(result_path, 'PNG')
+
     fs = FileSystemStorage()
     image_url = fs.url(result_filename)
     request.session['result_image'] = image_url
-
+    alphas.reverse()
     context = {
         'image_urls': image_urls,
-        'result_image': image_url
+        'result_image': image_url,
+        'alphas': alphas
     }
     return render(request, 'result.html', context)
-
 
 def red_filter(request, index):
     image_urls = request.session.get('uploaded_images', [])
@@ -209,26 +292,9 @@ def blue_filter(request, index):
     img.save(image_path)
     return redirect('/result')
 def change_opacity(request, index):
-    opacity = request.GET.get('opacity', 255)
-    opacity = int(opacity)
     image_urls = request.session.get('uploaded_images', [])
-    opacity_values = request.session.get('opacity_values', {})
+    alphas = request.session.get('alphas', [255]*len(image_urls))
+    alphas[index] = request.GET.get('opacity', 255)
+    request.session['alphas'] = alphas
 
-    if index < len(image_urls):
-        image_url = image_urls[index]
-        opacity_values[str(index)] = opacity
-        opacity_values[image_url] = opacity
-
-        decoded_url = unquote(image_url)
-        relative_path = decoded_url.replace('/media/', '', 1)
-        image_path = os.path.join(settings.MEDIA_ROOT, relative_path)
-
-        img = Image.open(image_path).convert('RGBA')
-        img_array = np.array(img)
-        if img_array.shape[2] == 4:
-            img_array[:, :, 3] = opacity
-            img = Image.fromarray(img_array, 'RGBA')
-            img.save(image_path, 'PNG')
-
-    request.session['opacity_values'] = opacity_values
     return redirect('/result')
