@@ -11,14 +11,12 @@ def layer_images(images, alphas):
             img = img.convert('RGBA')
         img_arrays.append(np.array(img))
 
-    # Определяем максимальные размеры
     shapes = [img.shape for img in img_arrays]
     mshape = [
         max(shape[0] for shape in shapes),
         max(shape[1] for shape in shapes)
     ]
 
-    # Инициализируем фоновые массивы
     alpha_bg = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
     c_bg = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
 
@@ -55,8 +53,6 @@ def layer_images(images, alphas):
     result = np.zeros((mshape[0], mshape[1], 4), dtype=np.uint8)
     result[:, :, :3] = (c_bg * 255).astype(np.uint8)
     result[:, :, 3] = (alpha_bg * 255).astype(np.uint8)
-
-    # Сохраняем результат
     img = Image.fromarray(result)
     result_filename = 'result.png'
     img.save(result_filename, 'PNG')
@@ -69,14 +65,14 @@ def sum_images(images, alphas):
             img = img.convert('RGBA')
         img_arrays.append(np.array(img))
 
-    # Определяем максимальные размеры
+
     shapes = [img.shape for img in img_arrays]
     mshape = [
         max(shape[0] for shape in shapes),
         max(shape[1] for shape in shapes)
     ]
 
-    # Инициализируем результирующие массивы
+
     result_alpha = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
     result_color = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
 
@@ -138,14 +134,12 @@ def mul_images(images, alphas):
             img = img.convert('RGBA')
         img_arrays.append(np.array(img))
 
-    # Определяем максимальные размеры
     shapes = [img.shape for img in img_arrays]
     mshape = [
         max(shape[0] for shape in shapes),
         max(shape[1] for shape in shapes)
     ]
 
-    # Инициализируем результирующие массивы
     result_alpha = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
     result_color = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
 
@@ -155,7 +149,6 @@ def mul_images(images, alphas):
 
         h, w = img.shape[:2]
 
-        # Получаем альфа-канал и цвет текущего изображения
         current_alpha = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
         current_color = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
 
@@ -197,7 +190,6 @@ def mul_images(images, alphas):
     result[:, :, :3] = (result_color * 255).astype(np.uint8)
     result[:, :, 3] = (result_alpha * 255).astype(np.uint8)
 
-    # Сохраняем результат
     img = Image.fromarray(result)
     result_filename = 'result.png'
     img.save(result_filename, 'PNG')
@@ -251,7 +243,6 @@ def sub_images(images, alphas):
         result_color = result_color_new
         result_alpha = new_alpha
 
-    # Создаем итоговое изображение
     result_color = np.clip(result_color, 0, 1)
     result_alpha = np.clip(result_alpha, 0, 1)
 
@@ -259,7 +250,6 @@ def sub_images(images, alphas):
     result[:, :, :3] = (result_color * 255).astype(np.uint8)
     result[:, :, 3] = (result_alpha * 255).astype(np.uint8)
 
-    # Сохраняем результат
     img = Image.fromarray(result)
     result_filename = 'result.png'
     img.save(result_filename, 'PNG')
@@ -271,14 +261,12 @@ def max_images(images, alphas):
             img = img.convert('RGBA')
         img_arrays.append(np.array(img))
 
-    # Определяем максимальные размеры
     shapes = [img.shape for img in img_arrays]
     mshape = [
         max(shape[0] for shape in shapes),
         max(shape[1] for shape in shapes)
     ]
 
-    # Инициализируем результирующие массивы
     result_alpha = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
     result_color = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
 
@@ -288,24 +276,20 @@ def max_images(images, alphas):
 
         h, w = img.shape[:2]
 
-        # Получаем альфа-канал и цвет текущего изображения
         current_alpha = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
         current_color = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
 
         current_alpha[:h, :w] = img[:, :, 3] / 255.0 * alpha
         current_color[:h, :w, :] = img[:, :, :3] / 255.0
 
-        # Суммируем с учетом альфа-каналов
-        # Обновляем альфа: сумма альф (но не больше 1)
+
         new_alpha = np.maximum(result_alpha, current_alpha)
         new_alpha = np.clip(new_alpha, 0, 1)
 
-        # Обновляем цвет: взвешенная сумма по альфа-каналам
         mask = (new_alpha > 0) & (current_alpha >0)
         result_color_new = result_color.copy()
 
         if np.any(mask):
-            # Взвешенное суммирование цветов с учетом их альф
             result_color_new[mask] = np.maximum(result_color[mask], current_color[mask])
         result_color_new[~mask] = result_color[~mask]
 
@@ -314,7 +298,6 @@ def max_images(images, alphas):
     mask_current_only = (result_alpha == 0) & (current_alpha > 0)
     if np.any(mask_current_only):
         result_color_new[mask_current_only] = current_color[mask_current_only]
-    # Создаем итоговое изображение
     result_color = np.clip(result_color, 0, 1)
     result_alpha = np.clip(result_alpha, 0, 1)
 
@@ -322,7 +305,6 @@ def max_images(images, alphas):
     result[:, :, :3] = (result_color * 255).astype(np.uint8)
     result[:, :, 3] = (result_alpha * 255).astype(np.uint8)
 
-    # Сохраняем результат
     img = Image.fromarray(result)
     result_filename = 'result.png'
     img.save(result_filename, 'PNG')
@@ -335,14 +317,12 @@ def geom_images(images, alphas):
             img = img.convert('RGBA')
         img_arrays.append(np.array(img))
 
-    # Определяем максимальные размеры
     shapes = [img.shape for img in img_arrays]
     mshape = [
         max(shape[0] for shape in shapes),
         max(shape[1] for shape in shapes)
     ]
 
-    # Инициализируем результирующие массивы
     result_alpha = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
     result_color = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
 
@@ -352,14 +332,12 @@ def geom_images(images, alphas):
 
         h, w = img.shape[:2]
 
-        # Получаем альфа-канал и цвет текущего изображения
         current_alpha = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
         current_color = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
 
         current_alpha[:h, :w] = img[:, :, 3] / 255.0 * alpha
         current_color[:h, :w, :] = img[:, :, :3] / 255.0
 
-        # Для первого изображения просто копируем
         if i == 0:
             result_alpha = current_alpha
             result_color = current_color
@@ -406,14 +384,12 @@ def sr_images(images, alphas):
             img = img.convert('RGBA')
         img_arrays.append(np.array(img))
 
-    # Определяем максимальные размеры
     shapes = [img.shape for img in img_arrays]
     mshape = [
         max(shape[0] for shape in shapes),
         max(shape[1] for shape in shapes)
     ]
 
-    # Инициализируем результирующие массивы
     result_alpha = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
     result_color = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
 
@@ -423,24 +399,19 @@ def sr_images(images, alphas):
 
         h, w = img.shape[:2]
 
-        # Получаем альфа-канал и цвет текущего изображения
         current_alpha = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
         current_color = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
 
         current_alpha[:h, :w] = img[:, :, 3] / 255.0 * alpha
         current_color[:h, :w, :] = img[:, :, :3] / 255.0
 
-        # Суммируем с учетом альфа-каналов
-        # Обновляем альфа: сумма альф (но не больше 1)
         new_alpha = result_alpha + current_alpha
         new_alpha = np.clip(new_alpha, 0, 1)
 
-        # Обновляем цвет: взвешенная сумма по альфа-каналам
         mask = new_alpha > 0
         result_color_new = np.zeros_like(result_color)
 
         if np.any(mask):
-            # Взвешенное суммирование цветов с учетом их альф
             result_color_new[mask] = (
                     (result_color[mask] * result_alpha[mask, np.newaxis] +
                      current_color[mask] * current_alpha[mask, np.newaxis]) /
@@ -452,7 +423,6 @@ def sr_images(images, alphas):
         result_alpha = new_alpha
         result_color = result_color_new
 
-    # Создаем итоговое изображение
     result_color = np.clip(result_color, 0, 1)
     result_alpha = np.clip(result_alpha, 0, 1)
 
@@ -465,10 +435,3 @@ def sr_images(images, alphas):
     result_filename = 'result.png'
     img.save(result_filename, 'PNG')
     return img
-
-img1 = Image.open('media/Meeeeeeeee.jpg')
-img2 = Image.open('media/yuri.jfif')
-img3 = Image.open('media/yuri2.jfif')
-images = [img3, img2]
-alphas = [1, 0.7]
-result = sr_images(images,alphas)

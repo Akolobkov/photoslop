@@ -23,6 +23,7 @@ urlpatterns = [
     path("", views.index),
     path("postpic/", views.postpic),
     path("pic/", views.showpic),
+    path("savepic/", views.savepic),
     #path("sshakalit/", views.sshakalit)
     path("del/<int:index>/", views.delete, name='delete_image_by_index'),
     path("up/<int:index>/", views.up, name='moveup_image_by_index'),
@@ -33,6 +34,7 @@ urlpatterns = [
     path("nogreen/<int:index>/", views.green_filter, name = 'remove_green_image_by_index'),
     path("noblue/<int:index>/", views.blue_filter, name = 'remove_blue_image_by_index'),
     path('change-opacity/<int:index>/', views.change_opacity, name='change_opacity'),
+    path('change-mode/<int:index>/', views.change_mode, name='change_mode_by_index'),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -2,16 +2,48 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Результаты формы</title>
+    <title>Фотослоп (думайте)</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .mode-select {
+            margin: 5px 0;
+            padding: 3px;
+            font-size: 12px;
+        }
+        .mode-buttons {
+            display: inline-flex;
+            gap: 3px;
+            margin: 5px 0;
+        }
+        .mode-btn {
+            padding: 2px 5px;
+            font-size: 11px;
+            cursor: pointer;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .mode-btn.active {
+            background: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        .mode-btn:hover {
+            background: #ddd;
+        }
+        .image-actions {
+            margin: 5px 0;
+        }
+    </style>
 </head>
 <body>
-<a href="/result" >Слопнуть</a>
+<a href="/result" >Слопнуть (перезагрузить)</a>
     <div class="container">
         <div class="empty-area">
             <img src={{result_image}} alt="Результат(слоп)">
+            <br>
+            <a href="/savepic" >Сохранить слоп бесплатно</a>
         </div>
-
         <div class="gallery-section">
             <h1>Галерея изображений</h1>
 
@@ -20,53 +52,81 @@
                     {% for image_url in image_urls %}
                         <div class="image-container">
                             <img src="{{ image_url }}" alt="Uploaded image {{ forloop.counter }}">
-                            <a href="{% url 'delete_image_by_index' index=forloop.counter0 %}" >X</a>
-                            <a href="{% url 'moveup_image_by_index' index=forloop.counter0 %}" >/\</a>
-                            <a href="{% url 'movedown_image_by_index' index=forloop.counter0 %}" >\/</a>
-                            <a href="{% url 'remove_red_image_by_index' index=forloop.counter0 %}" >красный</a>
-                            <a href="{% url 'remove_green_image_by_index' index=forloop.counter0 %}" >зеленый</a>
-                            <a href="{% url 'remove_blue_image_by_index' index=forloop.counter0 %}" >синий</a>
-                            <br>
+                            <div class="image-actions">
+                                <a href="{% url 'moveup_image_by_index' index=forloop.counter0 %}" >/\</a>
+                                <a href="{% url 'delete_image_by_index' index=forloop.counter0 %}" >X</a>
+                                <a href="{% url 'movedown_image_by_index' index=forloop.counter0 %}" >\/</a>
+                                <br>
+                                <a href="{% url 'remove_red_image_by_index' index=forloop.counter0 %}" >добавить/убрать</a> красный
+                                <br>
+                                <a href="{% url 'remove_green_image_by_index' index=forloop.counter0 %}" >добавить/убрать</a> зеленый
+                                <br>
+                                <a href="{% url 'remove_blue_image_by_index' index=forloop.counter0 %}" >добавить/убрать</a> синий
+                            </div>
+
+
+
+
+                            {% if modes %}
+                            {% for mode in modes %}
+                            {% if forloop.counter0 == forloop.parentloop.counter0 %}
+                            <select class="mode-select" onchange="changeMode({{ forloop.counter0 }}, this.value)">
+                                    <option value="0" {% if mode == '0' %}selected{% endif %}>Наложение</option>
+                                    <option value="1" {% if mode == '1' %}selected{% endif %}>Сумма</option>
+                                    <option value="2" {% if mode == '2' %}selected{% endif %}>Вычитание</option>
+                                    <option value="3" {% if mode == '3' %}selected{% endif %}>Максимум</option>
+                                    <option value="4" {% if mode == '4' %}selected{% endif %}>Геометрическое</option>
+                                    <option value="5" {% if mode == '5' %}selected{% endif %}>SR</option>
+                            </select>
+                            {% endif %}
+                            {% endfor %}
+                            {% endif %}
+
+
                             <div class="opacity-control">
-                            <div class="opacity-control">
-                        <label>Opacity:
-                            <input type="number"
-                                   min="0"
-                                   max="255"
-                                   value="
-                                   {% if alphas %}
-                                       {% for alpha in alphas %}
-                                           {% if forloop.counter0 == forloop.parentloop.counter0 %}
-                                               {{ alpha }}
+                                <label>Opacity:
+                                    <input type="number"
+                                           min="0"
+                                           max="255"
+                                           value="
+                                           {% if alphas %}
+                                               {% for alpha in alphas %}
+                                                   {% if forloop.counter0 == forloop.parentloop.counter0 %}
+                                                       {{ alpha }}
+                                                   {% endif %}
+                                               {% endfor %}
+                                           {% else %}
+                                               255
                                            {% endif %}
-                                       {% endfor %}
-                                   {% else %}
-                                       255
-                                   {% endif %}
-                                   "
-                                   onchange="changeOpacity(this, {{ forloop.counter0 }})">
-                        </label>
-                    </div>
-                               <span class="opacity-value">
-                                {% if alphas %}
-                                {% for alpha in alphas %}
-                                {% if forloop.counter0 == forloop.parentloop.counter0 %}
-                                    {{ alpha }}
-                                {% endif %}
-                                {% endfor %}
-                                {% else %}
-                                    255
-                                {% endif %}
+                                           "
+                                           onchange="changeOpacity(this, {{ forloop.counter0 }})">
+                                </label>
+                                <span class="opacity-value">
+                                    {% if alphas %}
+                                        {% for alpha in alphas %}
+                                            {% if forloop.counter0 == forloop.parentloop.counter0 %}
+                                                {{ alpha }}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        255
+                                    {% endif %}
                                 </span>
                             </div>
                         </div>
                     {% endfor %}
+
                     <script>
                     function changeOpacity(slider, index) {
-                    const opacity = slider.value;
-                    window.location.href = "{% url 'change_opacity' 0 %}".replace('0', index) + '?opacity=' + opacity;
+                        const opacity = slider.value;
+                        window.location.href = "{% url 'change_opacity' 0 %}".replace('0', index) + '?opacity=' + opacity;
+                    }
+
+                    function changeMode(index, mode) {
+                        window.location.href = "{% url 'change_mode_by_index' index=0 %}".replace('0', index) + '?mode=' + mode;
                     }
                     </script>
+
                 </div>
             {% else %}
                 <div class="empty-message">

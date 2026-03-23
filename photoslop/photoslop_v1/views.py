@@ -11,17 +11,29 @@ from urllib.parse import unquote
 from django.shortcuts import render
 import pickle
 import base64
-
+import photoslop_v1.layers
+from .layers import *
 
 
 def index(request):
     return render(request, "index.html")
+def savepic(request):
+    result_url = request.session.get('result_image', '')
+    if result_url:
+        decoded_url = unquote(result_url)
+        relative_path = decoded_url.replace('/media/', '', 1)
+        image_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+        if not os.path.exists(image_path):
+            print(f"Файл {image_path} не найден!")
 
-
+        img = Image.open(image_path)
+        img.show()
+    return redirect('/result')
 def postpic(request):
     if request.method == 'POST':
         image_urls = request.session.get('uploaded_images', [])
         alphas = request.session.get('alphas', [])
+        modes = request.session.get('modes', [1] * len(image_urls))
         if request.FILES.getlist('profile_image'):
             images = request.FILES.getlist('profile_image')
             fs = FileSystemStorage()
@@ -30,10 +42,12 @@ def postpic(request):
                 filename = fs.save(image.name, image)
                 image_url = fs.url(filename)
                 image_urls.append(image_url)
+                alphas.append(255)
+                modes.append(0)
 
             request.session['uploaded_images'] = image_urls
-            alphas.append(255)
             request.session['alphas'] = alphas
+            request.session['modes'] = modes
         return redirect('/result')
 
     return redirect('/')
@@ -51,6 +65,7 @@ def vanish(request):
 
     request.session['uploaded_images'] = []
     request.session['alphas'] = []
+    request.session['modes'] = []
     return redirect('/')
 
 
@@ -58,12 +73,12 @@ def delete(request, index):
     image_urls = request.session.get('uploaded_images', [])
     alphas = request.session.get('alphas', [])
 
-    # Удаляем изображение и соответствующее alpha-значение
+
     image_urls.pop(index)
     if alphas and index < len(alphas):
         alphas.pop(index)
 
-    # Сохраняем обновленные списки
+
     request.session['uploaded_images'] = image_urls
     request.session['alphas'] = alphas
 
@@ -75,18 +90,16 @@ def up(request, index):
     alphas = request.session.get('alphas', [])
 
     if index > 0:
-        # Меняем местами изображения
+
         buf_url = image_urls[index]
         image_urls[index] = image_urls[index - 1]
         image_urls[index - 1] = buf_url
 
-        # Меняем местами alpha-значения
         if alphas and index < len(alphas):
             buf_alpha = alphas[index]
             alphas[index] = alphas[index - 1]
             alphas[index - 1] = buf_alpha
 
-    # Сохраняем обновленные списки
     request.session['uploaded_images'] = image_urls
     request.session['alphas'] = alphas
 
@@ -98,18 +111,13 @@ def down(request, index):
     alphas = request.session.get('alphas', [])
 
     if index < len(image_urls) - 1:
-        # Меняем местами изображения
         buf_url = image_urls[index]
         image_urls[index] = image_urls[index + 1]
         image_urls[index + 1] = buf_url
-
-        # Меняем местами alpha-значения
         if alphas and index < len(alphas):
             buf_alpha = alphas[index]
             alphas[index] = alphas[index + 1]
             alphas[index + 1] = buf_alpha
-
-    # Сохраняем обновленные списки
     request.session['uploaded_images'] = image_urls
     request.session['alphas'] = alphas
 
@@ -122,14 +130,13 @@ def result(request):
     alphas = list(map(float, alphas))
     alphas = [x / 255 for x in alphas]
     alphas.reverse()
-
+    modes = request.session.get('modes')
     images = []
+
     for image_url in reversed(image_urls):
         decoded_url = unquote(image_url)
         relative_path = decoded_url.replace('/media/', '', 1)
         image_path = os.path.join(settings.MEDIA_ROOT, relative_path)
-
-        # Проверяем существование файла
         if not os.path.exists(image_path):
             print(f"Файл {image_path} не найден!")
             continue
@@ -137,60 +144,33 @@ def result(request):
         img = Image.open(image_path)
         images.append(img)
 
-    # Конвертируем в RGBA
-    img_arrays = []
-    for img in images:
-        if img.mode != 'RGBA':
-            img = img.convert('RGBA')
-        img_arrays.append(np.array(img))
+    if not images:
+        context = {
+            'error': 'Нет загруженных изображений',
+            'image_urls': image_urls,
+            'alphas': alphas
+        }
+        return render(request, 'result.html', context)
 
-    # Определяем максимальные размеры
-    shapes = [img.shape for img in img_arrays]
-    mshape = [
-        max(shape[0] for shape in shapes),
-        max(shape[1] for shape in shapes)
-    ]
+    result_array = images[0]
 
-    # Инициализируем фоновые массивы
-    alpha_bg = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
-    c_bg = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
+    for i in range(len(images) - 1):
+        current_mode = modes[i] if i < len(modes) else '0'  # режим по умолчанию
+        if current_mode == '1':
+            result_array = sum_images([result_array, images[i + 1]], [alphas[i], alphas[i + 1]])
+        elif current_mode == '2':
+            result_array = sub_images([result_array, images[i + 1]], [alphas[i], alphas[i + 1]])
+        elif current_mode == '3':
+            result_array = max_images([result_array, images[i + 1]], [alphas[i], alphas[i + 1]])
+        elif current_mode == '4':
+            result_array = geom_images([result_array, images[i + 1]], [alphas[i], alphas[i + 1]])
+        elif current_mode == '5':
+            result_array = sr_images([result_array, images[i + 1]], [alphas[i], alphas[i + 1]])
+        else:
+            result_array = layer_images([result_array, images[i + 1]], [alphas[i], alphas[i + 1]])
 
-    for i in range(len(img_arrays)):
-        img = img_arrays[i]
-        alpha = alphas[i] if i < len(alphas) else 1.0
 
-        h, w = img.shape[:2]
-
-        alpha_src = np.zeros((mshape[0], mshape[1]), dtype=np.float32)
-        c_src = np.zeros((mshape[0], mshape[1], 3), dtype=np.float32)
-
-        alpha_src[:h, :w] = img[:, :, 3] / 255.0
-        c_src[:h, :w, :] = img[:, :, :3] / 255.0
-
-        alpha_src = alpha_src * alpha
-
-        alpha_out = alpha_src + alpha_bg * (1 - alpha_src)
-
-        mask = alpha_out > 0
-        c_out = np.zeros_like(c_src)
-
-        c_out[mask] = (
-                              c_src[mask] * alpha_src[mask, np.newaxis] +
-                              c_bg[mask] * alpha_bg[mask, np.newaxis] * (1 - alpha_src[mask, np.newaxis])
-                      ) / alpha_out[mask, np.newaxis]
-
-        c_out[~mask] = c_bg[~mask]
-
-        alpha_bg = alpha_out
-        c_bg = c_out
-
-    # Создаем итоговое изображение
-    result = np.zeros((mshape[0], mshape[1], 4), dtype=np.uint8)
-    result[:, :, :3] = (c_bg * 255).astype(np.uint8)
-    result[:, :, 3] = (alpha_bg * 255).astype(np.uint8)
-
-    # Сохраняем результат
-    img = Image.fromarray(result)
+    img = result_array
     result_filename = 'result.png'
     result_path = os.path.join(settings.MEDIA_ROOT, result_filename)
     img.save(result_path, 'PNG')
@@ -199,10 +179,12 @@ def result(request):
     image_url = fs.url(result_filename)
     request.session['result_image'] = image_url
     alphas.reverse()
+    alphas = list(map(lambda x: x*255, alphas))
     context = {
         'image_urls': image_urls,
         'result_image': image_url,
-        'alphas': alphas
+        'alphas': alphas,
+        'modes': modes
     }
     return render(request, 'result.html', context)
 
@@ -216,7 +198,6 @@ def red_filter(request, index):
     img = Image.open(image_path)
     img_array = np.array(img)
 
-    # Получаем состояние из сессии
     img_state_pickled = request.session.get(f'{image_url}_pickled')
 
     if img_state_pickled:
@@ -297,4 +278,10 @@ def change_opacity(request, index):
     alphas[index] = request.GET.get('opacity', 255)
     request.session['alphas'] = alphas
 
+    return redirect('/result')
+def change_mode(request, index):
+    image_urls = request.session.get('uploaded_images', [])
+    modes = request.session.get('modes', [1]*len(image_urls))
+    modes[index] = request.GET.get('mode', 2)
+    request.session['modes'] = modes
     return redirect('/result')
