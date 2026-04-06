@@ -73,9 +73,9 @@ class LinearInterpolation:
 
 class InteractiveInterpolation:
     def __init__(self, initial_points: Optional[List[Tuple[float, float]]] = None,
-                 image_path: Optional[str] = None):
+                 image_path: Optional[str] = None, save_path: Optional[str] = None):
         self.points = initial_points.copy() if initial_points else [(0, 0), (255, 255)]
-
+        self.save_path = save_path
         self.image_path = image_path
         self.original_image = None
         self.processed_image = None
@@ -127,9 +127,10 @@ class InteractiveInterpolation:
         self.ax_hist = self.fig.add_subplot(gs[1, 0])
         self.ax_texts = self.fig.add_subplot(gs[1, 1])
         plt.subplots_adjust(bottom=0.15)
-        self.btn_ax_reset = plt.axes([0.59, 0.05, 0.1, 0.05])
-        self.btn_ax_add = plt.axes([0.7, 0.05, 0.1, 0.05])
-        self.btn_ax_clear = plt.axes([0.81, 0.05, 0.1, 0.05])
+        self.btn_ax_reset = plt.axes([0.65, 0.3, 0.1, 0.05])
+        self.btn_ax_add = plt.axes([0.85, 0.3, 0.1, 0.05])
+        self.btn_ax_clear = plt.axes([0.65, 0.2, 0.1, 0.05])
+        self.btn_ax_save = plt.axes([0.85, 0.2, 0.1, 0.05])
     def setup_hist(self):
         pass
     def update_hist(self):
@@ -170,11 +171,12 @@ class InteractiveInterpolation:
         self.btn_reset = Button(self.btn_ax_reset, 'Сброс')
         self.btn_add = Button(self.btn_ax_add, 'Добавить')
         self.btn_clear = Button(self.btn_ax_clear, 'Очистить')
-        self.btn_save = Button(self.btn_ax_clear, 'Сохранить')
+        self.btn_save = Button(self.btn_ax_save, 'Сохранить')
 
         self.btn_reset.on_clicked(self.reset_points)
         self.btn_add.on_clicked(self.toggle_add_mode)
         self.btn_clear.on_clicked(self.clear_points)
+        self.btn_save.on_clicked(self.save)
 
 
         self.fig.canvas.mpl_connect('button_press_event', self.on_press)
@@ -229,8 +231,7 @@ class InteractiveInterpolation:
         x_smooth = np.linspace(min(x_nodes), max(x_nodes), 500)
         y_smooth = [self.interpolation.interpolate_single(x) for x in x_smooth]
 
-        self.ax.plot(x_smooth, y_smooth, 'b-', linewidth=2.5, label='Интерполяция', alpha=0.8, zorder=1)
-        self.ax.plot(x_nodes, y_nodes, 'r--', linewidth=1, alpha=0.5, label='Отрезки')
+        self.ax.plot(x_nodes, y_nodes, 'b-', linewidth=1, alpha=0.5, label='Отрезки')
         self.ax.scatter(x_nodes, y_nodes, color='red', s=120, zorder=5, label='Узлы', picker=True)
 
 
@@ -316,9 +317,11 @@ class InteractiveInterpolation:
         plt.tight_layout()
         plt.show()
 
-
+    def save(self, event):
+        print('сохранено')
+        Image.fromarray(self.processed_image).save(self.save_path)
 
 
 if __name__ == "__main__":
-    interactive = InteractiveInterpolation(image_path='pic/redcat.jpg')
+    interactive = InteractiveInterpolation(image_path='pic/redcat.jpg', save_path='./result.png')
     interactive.show()

@@ -13,8 +13,16 @@ import pickle
 import base64
 import photoslop_v1.layers
 from .layers import *
-
-
+from .gradation import *
+def opengrad(request, index):
+    image_urls = request.session.get('uploaded_images', [])
+    image_url = image_urls[index]
+    decoded_url = unquote(image_url)
+    relative_path = decoded_url.replace('/media/', '', 1)
+    image_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+    interactive = InteractiveInterpolation(image_path=image_path, save_path=image_path)
+    interactive.show()
+    return redirect('/result')
 def index(request):
     return render(request, "index.html")
 def savepic(request):

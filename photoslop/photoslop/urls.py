@@ -30,6 +30,7 @@ urlpatterns = [
     path("down/<int:index>/", views.down, name='movedown_image_by_index'),
     path("result/", views.result),
     path("vanish/", views.vanish),
+    path("grad/<int:index>/", views.opengrad, name = 'open_grad_for_index'),
     path("nored/<int:index>/", views.red_filter, name = 'remove_red_image_by_index'),
     path("nogreen/<int:index>/", views.green_filter, name = 'remove_green_image_by_index'),
     path("noblue/<int:index>/", views.blue_filter, name = 'remove_blue_image_by_index'),
