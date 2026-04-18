@@ -36,6 +36,14 @@ urlpatterns = [
     path("noblue/<int:index>/", views.blue_filter, name = 'remove_blue_image_by_index'),
     path('change-opacity/<int:index>/', views.change_opacity, name='change_opacity'),
     path('change-mode/<int:index>/', views.change_mode, name='change_mode_by_index'),
+    path('open-bin/<int:index>/', views.binopen, name='open_bin_for_index'),
+    path('bingavr/', views.bingavr, name='bingavr'),
+    path('binotsu/', views.binotsu, name='binotsu'),
+    path('binniblek/', views.binniblek, name='binniblek'),
+    path('binsauvola/', views.binsauvola, name='binsauvola'),
+    path('binwolf/', views.binwolf, name='binwolf'),
+    path('binbr/', views.binbr, name='binbr'),
+    path('binsave/', views.binsave, name = 'binsave')
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

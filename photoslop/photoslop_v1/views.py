@@ -1,6 +1,6 @@
 from django.http import HttpResponse
 from django.core.files.storage import FileSystemStorage
-
+from .binarization import *
 from django.shortcuts import render, redirect
 from django.conf import settings
 from .forms import UserForm
@@ -292,4 +292,181 @@ def change_mode(request, index):
     modes = request.session.get('modes', [1]*len(image_urls))
     modes[index] = request.GET.get('mode', 2)
     request.session['modes'] = modes
+    return redirect('/result')
+
+
+def binopen(request, index):
+    image_urls = request.session.get('uploaded_images', [])
+
+    if index >= len(image_urls):
+        return redirect('/result')
+
+    image_url = image_urls[index]
+    decoded_url = unquote(image_url)
+    relative_path = decoded_url.replace('/media/', '', 1)
+    source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+
+    if not os.path.exists(source_path):
+        print(f"Файл {source_path} не найден!")
+        return redirect('/result')
+
+    original_name = os.path.splitext(os.path.basename(source_path))[0]
+    bin_filename = f"{original_name}_bincorig.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+
+    img = Image.open(source_path)
+    img.save(bin_path, 'PNG')
+
+
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    request.session['binorig'] = bin_url
+    request.session['binindex'] = index
+
+    context = {
+        'bin_img_url': bin_url,
+    }
+    return render(request, 'binar.html', context)
+
+def bingavr(request):
+    image_url = request.session.get('binorig')
+    decoded_url = unquote(image_url)
+    relative_path = decoded_url.replace('/media/', '', 1)
+    source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+    gavr_img = gavr(source_path)
+    original_name = os.path.splitext(os.path.basename(source_path))[0]
+    bin_filename = f"{original_name}_binchanging.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+
+    gavr_img.save(bin_path, 'PNG')
+
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    request.session['binchanging'] = bin_url
+    context = {
+        'bin_img_url': bin_url,
+    }
+    return render(request, 'binar.html', context)
+def binotsu(request):
+    image_url = request.session.get('binorig')
+    decoded_url = unquote(image_url)
+    relative_path = decoded_url.replace('/media/', '', 1)
+    source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+    otsu_img = otsu(source_path)
+    original_name = os.path.splitext(os.path.basename(source_path))[0]
+    bin_filename = f"{original_name}_binchanging.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+
+    otsu_img.save(bin_path, 'PNG')
+
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    request.session['binchanging'] = bin_url
+    context = {
+        'bin_img_url': bin_url,
+    }
+    return render(request, 'binar.html', context)
+def binniblek(request):
+    try:
+        a = int(request.GET.get('a', 15))
+        k = float(request.GET.get('k', -0.2))
+    except (ValueError, TypeError):
+        a = 15
+        k = -0.2
+    image_url = request.session.get('binorig')
+    decoded_url = unquote(image_url)
+    relative_path = decoded_url.replace('/media/', '', 1)
+    source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+    nib_img = niblek(source_path, a=a, k= k)
+    original_name = os.path.splitext(os.path.basename(source_path))[0]
+    bin_filename = f"{original_name}_binchanging.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+
+    nib_img.save(bin_path, 'PNG')
+
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    request.session['binchanging'] = bin_url
+    context = {
+        'bin_img_url': bin_url,
+    }
+    return render(request, 'binar.html', context)
+def binsauvola(request):
+    try:
+        a = int(request.GET.get('a', 15))
+        k = float(request.GET.get('k', -0.2))
+    except (ValueError, TypeError):
+        a = 15
+        k = 0.2
+    image_url = request.session.get('binorig')
+    decoded_url = unquote(image_url)
+    relative_path = decoded_url.replace('/media/', '', 1)
+    source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+    sau_img = savuola(source_path, a=a, k= k)
+    original_name = os.path.splitext(os.path.basename(source_path))[0]
+    bin_filename = f"{original_name}_binchanging.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+
+    sau_img.save(bin_path, 'PNG')
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    request.session['binchanging'] = bin_url
+    context = {
+        'bin_img_url': bin_url,
+    }
+    return render(request, 'binar.html', context)
+def binwolf(request):
+    try:
+        a = int(request.GET.get('a', 15))
+        k = float(request.GET.get('k', -0.2))
+    except (ValueError, TypeError):
+        a = 15
+        k = 0.2
+    image_url = request.session.get('binorig')
+    decoded_url = unquote(image_url)
+    relative_path = decoded_url.replace('/media/', '', 1)
+    source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+    wolf_img = wolf(source_path, a=a, k= k)
+    original_name = os.path.splitext(os.path.basename(source_path))[0]
+    bin_filename = f"{original_name}_binchanging.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+
+    wolf_img.save(bin_path, 'PNG')
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    request.session['binchanging'] = bin_url
+    context = {
+        'bin_img_url': bin_url,
+    }
+    return render(request, 'binar.html', context)
+def binbr(request):
+    try:
+        a = int(request.GET.get('a', 15))
+        k = float(request.GET.get('k', -0.2))
+    except (ValueError, TypeError):
+        a = 15
+        k = 0.15
+    image_url = request.session.get('binorig')
+    decoded_url = unquote(image_url)
+    relative_path = decoded_url.replace('/media/', '', 1)
+    source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+    br_img = bradleyrot(source_path, a=a, k= k)
+    original_name = os.path.splitext(os.path.basename(source_path))[0]
+    bin_filename = f"{original_name}_binchanging.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+
+    br_img.save(bin_path, 'PNG')
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    request.session['binchanging'] = bin_url
+    context = {
+        'bin_img_url': bin_url,
+    }
+    return render(request, 'binar.html', context)
+def binsave(request):
+    image_urls = request.session.get('uploaded_images', [])
+    changed_url = request.session.get('binchanging')
+    index = request.session.get('binindex', 0)
+    image_urls[index] = changed_url
+    request.session['image_urls'] = image_urls
     return redirect('/result')
