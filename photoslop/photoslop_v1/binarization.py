@@ -1,11 +1,18 @@
 import numpy as np
 from PIL import Image
+def to_grayscale(img_arr):
+    if len(img_arr.shape) == 2:
+        return img_arr.astype(np.float64)
+    elif len(img_arr.shape) == 3 and img_arr.shape[2] >= 3:
+        return np.dot(img_arr[..., :3], [0.2989, 0.5870, 0.1140])
+    else:
+        return img_arr.astype(np.float64)
 def gavr(img_path):
     img = Image.open(img_path)
     img_arr = np.array(img)
 
     t = np.mean(img_arr)
-    img_arr = np.dot(img_arr[..., :3], [0.2989, 0.5870, 0.1140])
+    img_arr = to_grayscale(img_arr)
     img_shape = img_arr.shape
     img_vec = img_arr.flatten()
     gavr_pic = np.zeros_like(img_vec)
@@ -20,7 +27,7 @@ def otsu(img_path):
     img = Image.open(img_path)
     img_arr = np.array(img)
 
-    img_arr = np.dot(img_arr[..., :3], [0.2989, 0.5870, 0.1140])
+    img_arr = to_grayscale(img_arr)
     img_shape = img_arr.shape
     img_vec = img_arr.flatten()
     img_int = np.round(img_arr).astype(np.uint8)
@@ -51,7 +58,7 @@ def otsu(img_path):
 def niblek(img_path, a, k):
     img = Image.open(img_path)
     img_arr = np.array(img)
-    img_arr = np.dot(img_arr[..., :3], [0.2989, 0.5870, 0.1140])
+    img_arr = to_grayscale(img_arr)
     window_shape = (a, a)
     windows = np.lib.stride_tricks.sliding_window_view(img_arr, window_shape)
     M = np.mean(windows, axis=(2,3))
@@ -67,7 +74,7 @@ def niblek(img_path, a, k):
 def savuola(img_path, a, k=0.2):
     img = Image.open(img_path)
     img_arr = np.array(img)
-    img_arr = np.dot(img_arr[..., :3], [0.2989, 0.5870, 0.1140])
+    img_arr = to_grayscale(img_arr)
     window_shape = (a, a)
     windows = np.lib.stride_tricks.sliding_window_view(img_arr, window_shape)
     M = np.mean(windows, axis=(2,3))
@@ -83,7 +90,7 @@ def savuola(img_path, a, k=0.2):
 def wolf(img_path, a, k, ag = 0.5):
     img = Image.open(img_path)
     img_arr = np.array(img)
-    img_arr = np.dot(img_arr[..., :3], [0.2989, 0.5870, 0.1140])
+    img_arr = to_grayscale(img_arr)
     window_shape = (a, a)
     windows = np.lib.stride_tricks.sliding_window_view(img_arr, window_shape)
     M = np.mean(windows, axis=(2,3))
@@ -103,7 +110,7 @@ def wolf(img_path, a, k, ag = 0.5):
 def bradleyrot(img_path, a, k, ag=0.5):
     img = Image.open(img_path)
     img_arr = np.array(img)
-    img_arr = np.dot(img_arr[..., :3], [0.2989, 0.5870, 0.1140])
+    img_arr = to_grayscale(img_arr)
 
     h, w = img_arr.shape
     S = np.zeros((h, w), dtype=np.float64)
@@ -148,4 +155,3 @@ def bradleyrot(img_path, a, k, ag=0.5):
     pic = pic.astype(np.uint8)
     pic = Image.fromarray(pic)
     return pic
-
