@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>БинариСлоп</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f8fafc;   /* очень светлый фон, чтобы контент выделялся */
+            min-height: 100vh;
+            display: flex;
+            align-items: center;      /* вертикальное центрирование (необязательно, но приятно) */
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .layout {
+            display: flex;
+            flex-direction: row;
+            gap: 2rem;           /* отступ между левым блоком кнопок и правым блоком картинки */
+            max-width: 1100px;
+            width: 100%;
+            background: white;
+            border-radius: 0;     /* минимум css — без скруглений */
+            box-shadow: none;     /* никаких теней, чистота */
+            padding: 0;
+        }
+
+        .button-panel {
+            flex: 1;              /* занимает равную долю пространства вместе с картинкой */
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;        /* небольшой вертикальный отступ между кнопками */
+            justify-content: center; /* кнопки можно выровнять по центру вертикали */
+        }
+
+        /* Стили кнопок: минималистичные, но с интерактивом и читабельностью */
+        .action-btn {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            padding: 0.9rem 1.2rem;
+            font-size: 1.25rem;
+            font-weight: 500;
+            font-family: inherit;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            color: #0f172a;
+            border-radius: 0;      /* без скруглений, строгий вид */
+            letter-spacing: 0.3px;
+            width: 100%;
+        }
+
+
+        .action-btn:hover {
+            background-color: #f1f5f9;
+            border-color: #94a3b8;
+        }
+
+
+        .action-btn:active {
+            background-color: #e2e8f0;
+            transform: scale(0.98);
+        }
+
+
+        .save-btn {
+            margin-top: 0.5rem;
+            background: #fef9c3;
+            border-color: #eab308;
+        }
+
+        .save-btn:hover {
+            background-color: #fde047;
+        }
+
+
+        .image-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+
+        .demo-image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            object-fit: contain;
+        }
+
+
+
+
+    </style>
+</head>
+<body>
+
+<div class="layout">
+    <div class="button-panel">
+        Гаусс с параметрами:
+        <form action="{% url 'filgauss' %}" method="get">
+        <label>Значение sig:
+        <input type="number"
+               name="sig"
+               step="0.1"
+               min="0"
+               max="3"
+               value="1">
+        </label>
+
+        <label>Значение r:
+        <input type="number"
+               name="r"
+               step="1"
+               min="1"
+               max="10"
+               value="3">
+        </label>
+
+        <button type="submit">Применить</button>
+        </form>
+        Медианная размера:
+        <form action="{% url 'filmedian' %}" method="get">
+        <label>h:
+        <input type="number"
+               name="h"
+               step="2"
+               min="1"
+               max="9"
+               value="3">
+        </label>
+
+        <label>w:
+        <input type="number"
+               name="w"
+               step="2"
+               min="1"
+               max="9"
+               value="3">
+        </label>
+
+        <button type="submit">Применить</button>
+        </form>
+        Произвольная матрица(числа через пробел):
+        <form action="{% url 'filmatrix' %}" method="post">
+        {% csrf_token %}
+        <br>
+        <textarea name="matrix_values" rows="10" cols="20">
+        </textarea>
+        </label>
+        <br>
+        <button type="submit">Применить</button>
+        </form>
+        <a href="{% url 'filsave' %}">Сохранить</a>
+    </div>
+
+    <div class="image-area">
+        <img class="demo-image"
+             src={{fil_img_url}}
+             alt="Не грузит (поплакать об этом)"
+             width="500"
+             height="500"
+             loading="lazy">
+    </div>
+</div>
+</body>
+</html>

@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 from django.core.files.storage import FileSystemStorage
 from .binarization import *
+from .filtration import *
 from django.shortcuts import render, redirect
 from django.conf import settings
 from .forms import UserForm
@@ -467,6 +468,129 @@ def binsave(request):
     image_urls = request.session.get('uploaded_images', [])
     changed_url = request.session.get('binchanging')
     index = request.session.get('binindex', 0)
+    image_urls[index] = changed_url
+    request.session['image_urls'] = image_urls
+    return redirect('/result')
+def filopen(request, index):
+    image_urls = request.session.get('uploaded_images', [])
+
+    if index >= len(image_urls):
+        return redirect('/result')
+
+    image_url = image_urls[index]
+    decoded_url = unquote(image_url)
+    relative_path = decoded_url.replace('/media/', '', 1)
+    source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+
+    if not os.path.exists(source_path):
+
+        return redirect('/result')
+
+    original_name = os.path.splitext(os.path.basename(source_path))[0]
+    bin_filename = f"{original_name}_filcorig.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+
+    img = Image.open(source_path)
+    img.save(bin_path, 'PNG')
+
+
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    request.session['filorig'] = bin_url
+    request.session['filindex'] = index
+
+    context = {
+        'fil_img_url': bin_url,
+    }
+    return render(request, 'filter.html', context)
+def filgauss(request):
+    try:
+        sig = int(request.GET.get('sig', 1))
+        r = float(request.GET.get('r', 3))
+    except (ValueError, TypeError):
+        sig = 1
+        r = 3
+    image_url = request.session.get('filorig')
+    decoded_url = unquote(image_url)
+    relative_path = decoded_url.replace('/media/', '', 1)
+    source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+    gauss_img = linearFromGaussianMatrix(source_path, sig, r)
+    original_name = os.path.splitext(os.path.basename(source_path))[0]
+    bin_filename = f"{original_name}_filchanging.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+
+    gauss_img.save(bin_path, 'PNG')
+
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    request.session['filchanging'] = bin_url
+    context = {
+        'fil_img_url': bin_url,
+    }
+    return render(request, 'filter.html', context)
+def filmedian(request):
+    try:
+        h = int(request.GET.get('sig', 1))
+        w = float(request.GET.get('r', 3))
+    except (ValueError, TypeError):
+        h = 3
+        w = 3
+    image_url = request.session.get('filorig')
+    decoded_url = unquote(image_url)
+    relative_path = decoded_url.replace('/media/', '', 1)
+    source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+
+    median_img = median(source_path, [h, w])
+    original_name = os.path.splitext(os.path.basename(source_path))[0]
+    bin_filename = f"{original_name}_filchanging.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+
+    median_img.save(bin_path, 'PNG')
+
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    request.session['filchanging'] = bin_url
+    context = {
+        'fil_img_url': bin_url,
+    }
+    return render(request, 'filter.html', context)
+def parse_matrix_from_text(text):
+    rows = text.strip().split('\n')
+    matrix = []
+    for row in rows:
+        values = list(map(float, row.strip().split()))
+        matrix.append(values)
+    return np.array(matrix)
+def filmatrix(request):
+
+    matrix_text = request.POST.get('matrix_values', '')
+    matrix = parse_matrix_from_text(matrix_text)
+    image_url = request.session.get('filorig')
+    if not image_url:
+        return render(request, 'filter.html', {'error': 'Нет загруженного изображения'})
+
+    decoded_url = unquote(image_url)
+    relative_path = decoded_url.replace('/media/', '', 1)
+    source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+
+
+    filtered_img = linearFromInputtedMatrix(source_path, matrix)
+    original_name = os.path.splitext(os.path.basename(source_path))[0]
+    bin_filename = f"{original_name}_matrixfilter.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+    filtered_img.save(bin_path, 'PNG')
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    request.session['filchanging'] = bin_url
+
+    context = {
+            'fil_img_url': bin_url,
+    }
+    return render(request, 'filter.html', context)
+def filsave(request):
+    image_urls = request.session.get('uploaded_images', [])
+    changed_url = request.session.get('filchanging')
+    index = request.session.get('filindex', 0)
     image_urls[index] = changed_url
     request.session['image_urls'] = image_urls
     return redirect('/result')
