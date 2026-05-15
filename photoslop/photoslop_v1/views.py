@@ -15,6 +15,7 @@ import base64
 import photoslop_v1.layers
 from .layers import *
 from .gradation import *
+from .freq import *
 def opengrad(request, index):
     image_urls = request.session.get('uploaded_images', [])
     image_url = image_urls[index]
@@ -591,6 +592,333 @@ def filsave(request):
     image_urls = request.session.get('uploaded_images', [])
     changed_url = request.session.get('filchanging')
     index = request.session.get('filindex', 0)
+    image_urls[index] = changed_url
+    request.session['image_urls'] = image_urls
+    return redirect('/result')
+def freqopen(request, index):
+     image_urls = request.session.get('uploaded_images', [])
+
+     if index >= len(image_urls):
+         return redirect('/result')
+
+     image_url = image_urls[index]
+     decoded_url = unquote(image_url)
+     relative_path = decoded_url.replace('/media/', '', 1)
+     source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+
+     if not os.path.exists(source_path):
+
+         return redirect('/result')
+
+     original_name = os.path.splitext(os.path.basename(source_path))[0]
+     bin_filename = f"{original_name}_fur.png"
+     bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+     Gs = twodimDFT(source_path)
+     img = visualize_furie(Gs)
+     img.save(bin_path, 'PNG')
+
+
+     fs = FileSystemStorage()
+     bin_url = fs.url(bin_filename)
+     request.session['freqorig'] = bin_url
+     request.session['freqindex'] = index
+     request.session['Gs_R_real'] = Gs[0].real.tolist()
+     request.session['Gs_R_imag'] = Gs[0].imag.tolist()
+
+     request.session['Gs_G_real'] = Gs[1].real.tolist()
+     request.session['Gs_G_imag'] = Gs[1].imag.tolist()
+
+     request.session['Gs_B_real'] = Gs[2].real.tolist()
+     request.session['Gs_B_imag'] = Gs[2].imag.tolist()
+
+
+     context = {
+        'freq_img_url': bin_url,
+     }
+     return render(request, 'freq.html', context)
+def lowfreq(request):
+    Gs = []
+
+    R_real = np.array(request.session.get('Gs_R_real'))
+    R_imag = np.array(request.session.get('Gs_R_imag'))
+    Gs.append(R_real + 1j * R_imag)
+
+    G_real = np.array(request.session.get('Gs_G_real'))
+    G_imag = np.array(request.session.get('Gs_G_imag'))
+    Gs.append(G_real + 1j * G_imag)
+
+    B_real = np.array(request.session.get('Gs_B_real'))
+    B_imag = np.array(request.session.get('Gs_B_imag'))
+    Gs.append(B_real + 1j * B_imag)
+    try:
+        r = int(request.GET.get('r', 10))
+    except (ValueError, TypeError):
+        r = 10
+    for G in Gs:
+        lowfreqfilter(G, r)
+    request.session['Gs1_R_real'] = Gs[0].real.tolist()
+    request.session['Gs1_R_imag'] = Gs[0].imag.tolist()
+
+    request.session['Gs1_G_real'] = Gs[1].real.tolist()
+    request.session['Gs1_G_imag'] = Gs[1].imag.tolist()
+
+    request.session['Gs1_B_real'] = Gs[2].real.tolist()
+    request.session['Gs1_B_imag'] = Gs[2].imag.tolist()
+
+    bin_filename = "fur1.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+    img = visualize_furie(Gs)
+    img.save(bin_path, 'PNG')
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    context = {
+        'freq_img_url': bin_url,
+    }
+    return render(request, 'freq.html', context)
+
+
+def highfreq(request):
+    Gs = []
+
+    R_real = np.array(request.session.get('Gs_R_real'))
+    R_imag = np.array(request.session.get('Gs_R_imag'))
+    Gs.append(R_real + 1j * R_imag)
+
+    G_real = np.array(request.session.get('Gs_G_real'))
+    G_imag = np.array(request.session.get('Gs_G_imag'))
+    Gs.append(G_real + 1j * G_imag)
+
+    B_real = np.array(request.session.get('Gs_B_real'))
+    B_imag = np.array(request.session.get('Gs_B_imag'))
+    Gs.append(B_real + 1j * B_imag)
+    try:
+        r = int(request.GET.get('r', 10))
+    except (ValueError, TypeError):
+        r = 10
+    for G in Gs:
+        highfreqfilter(G, r)
+    request.session['Gs1_R_real'] = Gs[0].real.tolist()
+    request.session['Gs1_R_imag'] = Gs[0].imag.tolist()
+
+    request.session['Gs1_G_real'] = Gs[1].real.tolist()
+    request.session['Gs1_G_imag'] = Gs[1].imag.tolist()
+
+    request.session['Gs1_B_real'] = Gs[2].real.tolist()
+    request.session['Gs1_B_imag'] = Gs[2].imag.tolist()
+
+    bin_filename = "fur1.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+    img = visualize_furie(Gs)
+    img.save(bin_path, 'PNG')
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    context = {
+        'freq_img_url': bin_url,
+    }
+    return render(request, 'freq.html', context)
+def reject(request):
+    Gs = []
+
+    R_real = np.array(request.session.get('Gs_R_real'))
+    R_imag = np.array(request.session.get('Gs_R_imag'))
+    Gs.append(R_real + 1j * R_imag)
+
+    G_real = np.array(request.session.get('Gs_G_real'))
+    G_imag = np.array(request.session.get('Gs_G_imag'))
+    Gs.append(G_real + 1j * G_imag)
+
+    B_real = np.array(request.session.get('Gs_B_real'))
+    B_imag = np.array(request.session.get('Gs_B_imag'))
+    Gs.append(B_real + 1j * B_imag)
+    try:
+        r1 = int(request.GET.get('r1', 10))
+        r2 = int(request.GET.get('r2', 20))
+    except (ValueError, TypeError):
+        r1 = 10
+        r2 = 20
+    for G in Gs:
+        rejectfilter(G, r1, r2)
+    request.session['Gs1_R_real'] = Gs[0].real.tolist()
+    request.session['Gs1_R_imag'] = Gs[0].imag.tolist()
+
+    request.session['Gs1_G_real'] = Gs[1].real.tolist()
+    request.session['Gs1_G_imag'] = Gs[1].imag.tolist()
+
+    request.session['Gs1_B_real'] = Gs[2].real.tolist()
+    request.session['Gs1_B_imag'] = Gs[2].imag.tolist()
+
+    bin_filename = "fur1.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+    img = visualize_furie(Gs)
+    img.save(bin_path, 'PNG')
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    context = {
+        'freq_img_url': bin_url,
+    }
+    return render(request, 'freq.html', context)
+def line(request):
+    Gs = []
+
+    R_real = np.array(request.session.get('Gs_R_real'))
+    R_imag = np.array(request.session.get('Gs_R_imag'))
+    Gs.append(R_real + 1j * R_imag)
+
+    G_real = np.array(request.session.get('Gs_G_real'))
+    G_imag = np.array(request.session.get('Gs_G_imag'))
+    Gs.append(G_real + 1j * G_imag)
+
+    B_real = np.array(request.session.get('Gs_B_real'))
+    B_imag = np.array(request.session.get('Gs_B_imag'))
+    Gs.append(B_real + 1j * B_imag)
+    try:
+        r1 = int(request.GET.get('r1', 10))
+        r2 = int(request.GET.get('r2', 20))
+    except (ValueError, TypeError):
+        r1 = 10
+        r2 = 20
+    for G in Gs:
+        linefilter(G, r1, r2)
+    request.session['Gs1_R_real'] = Gs[0].real.tolist()
+    request.session['Gs1_R_imag'] = Gs[0].imag.tolist()
+
+    request.session['Gs1_G_real'] = Gs[1].real.tolist()
+    request.session['Gs1_G_imag'] = Gs[1].imag.tolist()
+
+    request.session['Gs1_B_real'] = Gs[2].real.tolist()
+    request.session['Gs1_B_imag'] = Gs[2].imag.tolist()
+
+    bin_filename = "fur1.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+    img = visualize_furie(Gs)
+    img.save(bin_path, 'PNG')
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    context = {
+        'freq_img_url': bin_url,
+    }
+    return render(request, 'freq.html', context)
+def narrowrej(request):
+    Gs = []
+
+    R_real = np.array(request.session.get('Gs_R_real'))
+    R_imag = np.array(request.session.get('Gs_R_imag'))
+    Gs.append(R_real + 1j * R_imag)
+
+    G_real = np.array(request.session.get('Gs_G_real'))
+    G_imag = np.array(request.session.get('Gs_G_imag'))
+    Gs.append(G_real + 1j * G_imag)
+
+    B_real = np.array(request.session.get('Gs_B_real'))
+    B_imag = np.array(request.session.get('Gs_B_imag'))
+    Gs.append(B_real + 1j * B_imag)
+    try:
+        r1 = int(request.GET.get('r1', 10))
+        r2 = int(request.GET.get('r2', 20))
+        x = int(request.GET.get('x', 40))
+        y = int(request.GET.get('y', 40))
+        shape = str(request.GET.get('shape', 'circle'))
+    except (ValueError, TypeError):
+        r1 = 10
+        r2 = 20
+        x = 40
+        y = 40
+        shape = 'circle'
+    for G in Gs:
+        narrowrejfilter(G, x, y, r1, r2, shape)
+    request.session['Gs1_R_real'] = Gs[0].real.tolist()
+    request.session['Gs1_R_imag'] = Gs[0].imag.tolist()
+
+    request.session['Gs1_G_real'] = Gs[1].real.tolist()
+    request.session['Gs1_G_imag'] = Gs[1].imag.tolist()
+
+    request.session['Gs1_B_real'] = Gs[2].real.tolist()
+    request.session['Gs1_B_imag'] = Gs[2].imag.tolist()
+
+    bin_filename = "fur1.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+    img = visualize_furie(Gs)
+    img.save(bin_path, 'PNG')
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    context = {
+        'freq_img_url': bin_url,
+    }
+    return render(request, 'freq.html', context)
+def narrowline(request):
+    Gs = []
+
+    R_real = np.array(request.session.get('Gs_R_real'))
+    R_imag = np.array(request.session.get('Gs_R_imag'))
+    Gs.append(R_real + 1j * R_imag)
+
+    G_real = np.array(request.session.get('Gs_G_real'))
+    G_imag = np.array(request.session.get('Gs_G_imag'))
+    Gs.append(G_real + 1j * G_imag)
+
+    B_real = np.array(request.session.get('Gs_B_real'))
+    B_imag = np.array(request.session.get('Gs_B_imag'))
+    Gs.append(B_real + 1j * B_imag)
+    try:
+        r1 = int(request.GET.get('r1', 10))
+        r2 = int(request.GET.get('r2', 20))
+        x = int(request.GET.get('x', 40))
+        y = int(request.GET.get('y', 40))
+        shape = str(request.GET.get('shape', 'circle'))
+    except (ValueError, TypeError):
+        r1 = 10
+        r2 = 20
+        x = 40
+        y = 40
+        shape = 'circle'
+    for G in Gs:
+        narrowlinefilter(G, x, y, r1, r2, shape)
+    request.session['Gs1_R_real'] = Gs[0].real.tolist()
+    request.session['Gs1_R_imag'] = Gs[0].imag.tolist()
+
+    request.session['Gs1_G_real'] = Gs[1].real.tolist()
+    request.session['Gs1_G_imag'] = Gs[1].imag.tolist()
+
+    request.session['Gs1_B_real'] = Gs[2].real.tolist()
+    request.session['Gs1_B_imag'] = Gs[2].imag.tolist()
+
+    bin_filename = "fur1.png"
+    bin_path = os.path.join(settings.MEDIA_ROOT, bin_filename)
+    img = visualize_furie(Gs)
+    img.save(bin_path, 'PNG')
+    fs = FileSystemStorage()
+    bin_url = fs.url(bin_filename)
+    context = {
+        'freq_img_url': bin_url,
+    }
+    return render(request, 'freq.html', context)
+def freqsave(request):
+    Gs = []
+
+    R_real = np.array(request.session.get('Gs1_R_real'))
+    R_imag = np.array(request.session.get('Gs1_R_imag'))
+    Gs.append(R_real + 1j * R_imag)
+
+    G_real = np.array(request.session.get('Gs1_G_real'))
+    G_imag = np.array(request.session.get('Gs1_G_imag'))
+    Gs.append(G_real + 1j * G_imag)
+
+    B_real = np.array(request.session.get('Gs1_B_real'))
+    B_imag = np.array(request.session.get('Gs1_B_imag'))
+    Gs.append(B_real + 1j * B_imag)
+    Xs = []
+    for G in Gs:
+        Xs.append(backwardtwodimDFT(G))
+    img = np.stack((Xs[0], Xs[1], Xs[2]), axis=2)
+    img = np.clip(img, 0, 255)
+    img = img.astype(np.uint8)
+    img = Image.fromarray(img)
+    filename = 'freqnew.png'
+    img.save(os.path.join(settings.MEDIA_ROOT, filename), 'PNG')
+    image_urls = request.session.get('uploaded_images', [])
+    index = request.session.get('freqindex', 0)
+    fs = FileSystemStorage()
+    changed_url = fs.url(filename)
     image_urls[index] = changed_url
     request.session['image_urls'] = image_urls
     return redirect('/result')

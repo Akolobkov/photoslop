@@ -38,6 +38,7 @@ urlpatterns = [
     path('change-mode/<int:index>/', views.change_mode, name='change_mode_by_index'),
     path('open-bin/<int:index>/', views.binopen, name='open_bin_for_index'),
     path('open-fil/<int:index>/', views.filopen, name='open_fil_for_index'),
+    path('open-freq/<int:index>/', views.freqopen, name='open_freq_for_index'),
     path('bingavr/', views.bingavr, name='bingavr'),
     path('binotsu/', views.binotsu, name='binotsu'),
     path('binniblek/', views.binniblek, name='binniblek'),
@@ -48,7 +49,15 @@ urlpatterns = [
     path('filgauss/', views.filgauss, name = 'filgauss'),
     path('filmedian/', views.filmedian, name = 'filmedian'),
     path('filmatrix/', views.filmatrix, name = 'filmatrix'),
-    path('filsave/', views.filsave, name = 'filsave')
+    path('filsave/', views.filsave, name = 'filsave'),
+    path('lowfreq/', views.lowfreq, name = 'lowfreq'),
+    path('reject/', views.reject, name = 'reject'),
+    path('line/', views.line, name = 'line'),
+    path('narrowrej/', views.narrowrej, name = 'narrowrej'),
+    path('narrowline/', views.narrowline, name = 'narrowline'),
+    path('highfreq/', views.highfreq, name = 'highfreq'),
+    path('freqsave/', views.freqsave, name = 'freqsave'),
+
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
